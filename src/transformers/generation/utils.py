@@ -1503,6 +1503,7 @@ class GenerationMixin:
                 **model_kwargs,
             )
         if is_greedy_gen_mode:
+            print("is_greedy_gen_mode", True)
             if generation_config.num_return_sequences > 1:
                 raise ValueError(
                     "num_return_sequences has to be 1 when doing greedy search, "
@@ -2312,6 +2313,8 @@ class GenerationMixin:
         unfinished_sequences = torch.ones(input_ids.shape[0], dtype=torch.long, device=input_ids.device)
 
         this_peer_finished = False  # used by synced_gpus only
+        import time
+        total_forwardpass_time = 0
         while True:
             if synced_gpus:
                 # Under synced_gpus the `forward` call must continue until all gpus complete their sequence.
@@ -2326,6 +2329,8 @@ class GenerationMixin:
             # prepare model inputs
             model_inputs = self.prepare_inputs_for_generation(input_ids, **model_kwargs)
 
+            t0 = time.time()
+
             # forward pass to get next token
             outputs = self(
                 **model_inputs,
@@ -2333,6 +2338,13 @@ class GenerationMixin:
                 output_attentions=output_attentions,
                 output_hidden_states=output_hidden_states,
             )
+            if total_forwardpass_time == 0:
+                total_forwardpass_time += time.time() - t0
+                print("First forward pass time", total_forwardpass_time)
+            else:
+                total_forwardpass_time += time.time() - t0
+            # assert False
+            # assert False
 
             if synced_gpus and this_peer_finished:
                 continue  # don't waste resources running the code we don't need
@@ -2396,6 +2408,8 @@ class GenerationMixin:
 
         if streamer is not None:
             streamer.end()
+        # print("Greedy Search time ", time.time() - t0, "s")
+        # print("Total forward pass time", total_forwardpass_time)
 
         if return_dict_in_generate:
             if self.config.is_encoder_decoder:
