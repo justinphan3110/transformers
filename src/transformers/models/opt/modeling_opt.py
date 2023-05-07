@@ -947,7 +947,7 @@ class OPTForCausalLM(OPTPreTrainedModel):
             output_hidden_states=output_hidden_states,
             return_dict=return_dict,
         )
-        print("past_key_values", past_key_values)
+        # print("past_key_values", past_key_values)
         print(f"Decoder forward time {self.model.device}", time.time() - t0 , "s")
 
         logits = self.lm_head(outputs[0]).contiguous()
